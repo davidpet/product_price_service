@@ -52,10 +52,12 @@ NOTE: this is obtained by doing the GET request and then doing __Copy -> Copy as
     - unique
     - case insensitive
     - already has correct spacing (no extra to trim)
+    - empty/blank is invalid
 1. Retailer
     - unique
     - case insensitive
     - already has correct spacing (no extra to trim)
+    - empty/blank is invalid
 1. Price
     - nonnegative float
     - even though examples show ints, float seems a natural choice
@@ -65,6 +67,8 @@ NOTE: this is obtained by doing the GET request and then doing __Copy -> Copy as
     - for multiple retailers having the same price, the older one is favored
         - more effiicient for our DB operations
         - also makes sense to favor a stable lower price than one that just changed
+1. Url
+    - because optional, not going to check if empty, blank, etc. (just take it)
 1. Traffic Patterns
     - `findPrice()` is called much more frequently than `receive()`
     - `receive()` on the order of once per day per sku per retailer

@@ -16,8 +16,16 @@ cache_strategy = get_cache_strategy()
 
 @app.route('/receive', methods=['PUT'])
 def receive():
-    # TODO: error handling for missing/invalid fields
     data = request.json
+    if not 'sku' in data or not data['sku'].strip():
+        return jsonify({"message": "Missing sku"}), 400
+    if not 'retailer' in data or not data['retailer'].strip():
+        return jsonify({"message": "Missing retailer"}), 400
+    if not 'price' in data:
+        return jsonify({"message": "Missing price"}), 400
+    if data['price'] < 0:
+        return jsonify({"message": "Price cannot be negative"}), 400
+
     api_record = APIRecord(sku = data['sku'].lower(),
                            retailer = data['retailer'].lower(),
                            price = data['price'],
@@ -31,10 +39,9 @@ def receive():
 
     return '', 204 # nothing to return (void)(user doesn't need to know ID of history table ever)
 
-# TODO: consider whether the sku format is incompatible with being in a url (or document assumption)
 @app.route('/find-price/<string:sku>', methods=['GET'])
 def find_price(sku):
-    # TODO: verify the sku format (eg. not empty)
+    # missing/empty sku will be 404 without any extra check here
     sku = sku.lower()
 
     result = cache_strategy.retrieve(sku)
