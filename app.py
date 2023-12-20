@@ -1,18 +1,33 @@
 # TODO: docstrings
 # TODO: type annotations
-# TODO: format
+# TODO: format+lint
 # TODO: unit tests
 # TODO: make sure README.md is all up to date and finalized
 # TODO: document dependencies (anything that needs to be pip installed or configured on system)
 #       Flask
 # TODO: consider making a manual testing app that uses 'requests' instead of devtools hacking with fetch
-
-# TODO: consider the case of being able to do price history analysis
-#       probably requires an ID field and timestamp added to the DB schema
-#       then tweak the primary key and index structure
-#       query would be for either sku or sku+retailer and get back sorted history list (maybe another index)
 # TODO: schema, index, and rationale strategy (separet doc)
 
+# TODO: due to the note about needing to be able to do price history analysis
+#       we need to store timestamps and multiple historical points for each retailer
+#       even though we won't use it right now for this exercise (it's irreversible to not include it)
+#
+#       that necessitates a change to my current schema
+#       to query for latest timestamp of each sku+retailer and then get the lowest price for that is too expensive
+#       since we were specifically told the latency of the lowestPrice() hook is paramount, we will sacrifice
+#       other things towards that end
+#
+#       we will have two tables - one with the full datapoints (inc. timestamp and maybe a unique ID)
+#                               - one with just sku+retailer+latest price+url(indexed on sku+retailer+price)
+#       we will write both tables in a transaction in receive() so they stay in sync
+#       cost: redundant storage of latest datapoint data + about double write time
+#       
+#       alternative: the 2nd table uses ID and price only
+#                    then the read has to use the first table to find the ID for sku+retailer
+#                    and then take that ID to the 2nd table and find the lowest price
+#                    definitely mention as an alternative considered, but to meet the 20 ms, go with the other way
+#                    include code snippet of the other way somewhere in case
+            
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
