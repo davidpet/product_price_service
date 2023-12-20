@@ -9,7 +9,8 @@ Currently only uses in-memory dict of all request objects and does a slow O(n^2)
 
 ## Testing
 1. Run as above
-1. To test `findPrice()`, append `/find-price/{sku}`, where `{sku}` should be some product sku, to the url
+1. To see the current state of the in-memory simulated tables, append `/debug` to the url.
+1. To test `findPrice()`, append `/find-price/{sku}`, where `{sku}` should be some product sku, to the url.
 1. To test `receive()`, run this in Chrome DevTools console, replacing fields of `body` and changing the url if different:
 ```JavaScript
 fetch("http://127.0.0.1:5000/receive", {
@@ -61,6 +62,9 @@ NOTE: this is obtained by doing the GET request and then doing __Copy -> Copy as
     - could cut it down to 2nd decimal places for cents, but leaving full range for now
         - because unit prices can sometimes be divided strangely in bulk discounts, which user may want to know
           - some retailers may only sell in bulk, so only the divided price would be available
+    - for multiple retailers having the same price, the older one is favored
+        - more effiicient for our DB operations
+        - also makes sense to favor a stable lower price than one that just changed
 1. Traffic Patterns
     - `findPrice()` is called much more frequently than `receive()`
     - `receive()` on the order of once per day per sku per retailer
