@@ -1,5 +1,5 @@
 def get_cache_strategy():
-    # TODO: consider redis version
+    # TODO: consider redis version and mirroring
     return InMemoryCacheStrategy()
 
 class CacheStrategy:
