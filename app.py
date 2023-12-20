@@ -72,7 +72,7 @@ def receive():
 
 # TODO: separate the business logic from the HTTP logic
 #       findPrice() in original spec, find_price in Python style
-# TODO: respond to web-scale traffic (under 20 ms)
+# TODO: respond to web-scale traffic (under 20 ms)(redis?)
 @app.route('/find-price/<string:sku>', methods=['GET'])
 def find_price(sku):
     # TODO: verify the sku format
