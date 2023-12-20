@@ -17,10 +17,9 @@ cache_strategy = get_cache_strategy()
 @app.route('/receive', methods=['PUT'])
 def receive():
     # TODO: error handling for missing/invalid fields
-    # TODO: convert skus and/or retailers to lowercase for consistent comparisons
     data = request.json
-    api_record = APIRecord(sku = data['sku'],
-                           retailer = data['retailer'],
+    api_record = APIRecord(sku = data['sku'].lower(),
+                           retailer = data['retailer'].lower(),
                            price = data['price'],
                            url = data.get('url', None))
 
@@ -36,8 +35,8 @@ def receive():
 @app.route('/find-price/<string:sku>', methods=['GET'])
 def find_price(sku):
     # TODO: verify the sku format (eg. not empty)
-    # TODO: convert sku to lowercase for consistent comparison
-    
+    sku = sku.lower()
+
     result = cache_strategy.retrieve(sku)
     if not result:
         result = storage_strategy.lowest_price(sku)
