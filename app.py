@@ -5,8 +5,10 @@
 # TODO: consider making a manual testing app that uses 'requests' instead of devtools hacking with fetch
             
 from flask import Flask, jsonify, request
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from datetime import datetime
+
+from schema import APIRecord, HistoryRecord, LatestPriceRecord, LowestPriceRecord
 
 app = Flask(__name__)
 
@@ -18,36 +20,6 @@ history_table = {}
 next_history_table_id = 0
 latest_price_table = {}
 lowest_price_table = {}
-
-@dataclass(frozen=True)
-class HistoryRecord:
-    id: int # primary key (auto-incremented)
-    sku: str
-    retailer: str
-    price: float
-    timestamp: datetime
-    url: str|None = None
-
-@dataclass(frozen=True)
-class LatestPriceRecord:
-    sku: str # composite primary key + composite index
-    retailer: str # composite primary key
-    price: float # composite index
-    url: str|None = None
-
-@dataclass(frozen=True)
-class LowestPriceRecord:
-    sku: str # primary key (index)
-    retailer: str
-    price: float
-    url: str|None = None
-
-@dataclass(frozen=True)
-class APIRecord:
-    sku: str
-    retailer: str
-    price: float
-    url: str|None = None
 
 @app.route('/receive', methods=['PUT'])
 def receive():
