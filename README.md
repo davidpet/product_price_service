@@ -1,6 +1,6 @@
 # Product Price Service
 ## Status
-Currently only uses in-memory array of all request objects and does a slow O(n^2) search to find the lowest.
+Currently only uses in-memory dict of all request objects and does a slow O(n^2) search to find the lowest.
 
 ## Running
 1. `cd` into this folder

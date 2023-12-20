@@ -26,7 +26,7 @@ app = Flask(__name__)
 #   exactly same fields as PriceUpdate
 # Schema
 #   PriceUpdate structure above
-#   primary key = sku
+#   primary key = sku+retailer
 #   index = sku+price
 
 # TODO: fill this out more as go along and at the end
@@ -35,21 +35,23 @@ app = Flask(__name__)
 #   2. assumed float for prices because more realistic (though examples are in dollars only)
 #   3. none of the examples show spaces in sku or retailer, but assuming they are OK
 #   4. retailer and sku strings are case sensitive and won't be duplicated in a mismatched way
+#   5. only 1 instance of sku per retailer (for now)
 
 # TODO: make this real and configurable (inc. mirroring, in-memory, and unit testing)
 #   not required to be fully implemented - at least comment what it should do
 # TODO; separate the DB logic from the HTTP logic
 # TODO: consider if this can be made safer for the gunicorn (multiprocess) case
-db = []
+db = {}
 
 @app.route('/receive', methods=['PUT'])
 def receive():
     data = request.json
     # TODO: error handling for missing/invalid fields
     # TODO: possibly convert skus and/or retailers to lowercase for consistent comparisons
-
     # TODO: handle duplicate prices for same sku+retailer properly
-    db.append(data)
+    key = data['sku'],data['retailer']
+
+    db[key] = data
 
     return '', 204 # nothing to return (void)
 
@@ -61,7 +63,7 @@ def find_price(sku):
     # TODO: verify the sku format
     # TODO: possibly convert sku to lowercase for consistent comparison
     # TODO: make this more efficient (even for the simulated version)
-    prices = [product_price for product_price in db if product_price['sku'] == sku]
+    prices = [product_price for product_price in db.values() if product_price['sku'] == sku]
     if not prices:
         return jsonify({"message": "Product not found"}), 404
     lowest_price = min(prices, key = lambda price: price['price'])
