@@ -19,7 +19,6 @@ def receive():
     data = request.json
     # TODO: error handling for missing/invalid fields
     # TODO: convert skus and/or retailers to lowercase for consistent comparisons
-    # TODO: handle duplicate prices for same sku+retailer properly
     key = data['sku'],data['retailer']
 
     db[key] = data
@@ -32,9 +31,8 @@ def receive():
 # TODO: consider whether the sku format is incompatible with being in a url (or document assumption)
 @app.route('/find-price/<string:sku>', methods=['GET'])
 def find_price(sku):
-    # TODO: verify the sku format
+    # TODO: verify the sku format (eg. not empty)
     # TODO: convert sku to lowercase for consistent comparison
-    # TODO: make this more efficient (even for the simulated version)
     prices = [product_price for product_price in db.values() if product_price['sku'] == sku]
     if not prices:
         return jsonify({"message": "Product not found"}), 404
