@@ -1,52 +1,13 @@
 # Product Price Service
 
-## Status
+## Code Layout
 
-When you run the app it will use an in-memory version of the database tables and appear to work (though without any indexing or network latency). A sketch of the beginning of the code for using mirrored databases is shown in `storage_strategy.py` along with the base class and the in-memory version.
-
-## Running
-
-1. `cd` into this folder
-1. `python3 app.py`
-1. Ctrl/cmd-click the link from the terminal to open in Chrome (will be "broken" link)
-
-## Testing
-
-1. Run as above
-1. To see the current state of the in-memory simulated tables, append `/debug` to the url.
-1. To test `findPrice()`, append `/find-price/{sku}`, where `{sku}` should be some product sku, to the url.
-1. To test `receive()`, run this in Chrome DevTools console, replacing fields of `body` and changing the url if different:
-
-```JavaScript
-fetch("http://127.0.0.1:5000/receive", {
-  "headers": {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "accept-language": "en-US,en;q=0.9",
-    "cache-control": "max-age=0",
-    "sec-ch-ua": "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "\"macOS\"",
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
-    "content-type": "application/json",
-  },
-  "referrerPolicy": "strict-origin-when-cross-origin",
-  "body": JSON.stringify({
-      sku: '123',
-      retailer: 'bob\'s furniture',
-      price: 172.9,
-      url: 'whatever.com',
-  }),
-  "method": "PUT",
-  "mode": "cors",
-  "credentials": "include"
-});
-```
-
-NOTE: this is obtained by doing the GET request and then doing **Copy -> Copy as Fetch** and modifying the url, body, method, and content-type.
+1. `app.py` is the main program start point
+1. `views.py` contains the RESTful HTTP methods and field validation
+1. `schema.py` contains the table schema
+1. `storage_strategy.py` contains code related to mirrored DB calls and also a workflow demo using an in-memory simulated DB
+1. `cache_strategy.py` contains code related to caching (mostly just an in-memory stub and some comments on what could be done)
+1. `*_test.py` files contain unit tests for their corresponding `*.py` files (3 total)
 
 ## Dependencies
 
@@ -164,3 +125,57 @@ Because we will write to three tables and potentially read from 1 table transact
 1. **background task** to sync results on the backend instead of making the `receive()` webhook do it. For instance, we could write only the History Table and have the background task compute the Lowest Price Table every few minutes. Alternatively, we could write the History Table and Latest Price table in `receive()` and then let the background task compute the Lowest Price table, eliminating the need for the extra query logic in `receive()`. Both of these approaches would speed up `receive()` but cause a delay between when a price changes and when customers see the potentially new low price (or higher price) in `findPrice()`.
 
 1. **normalized tables** could be used to cut down on the redundant data storage. But that would incur more read/join operations in `findPrice()` which would harm our ability to hit the 20 ms latency goal. If we found that the normalized approach is better after the APIs have been in use for a while, we could still migrate to a normalized solution, incurring some downtime for users.
+
+## Project Status
+
+When you run the app it will use an in-memory version of the database tables and appear to work (though without any indexing or network latency). A sketch of the beginning of the code for using mirrored databases is shown in `storage_strategy.py` along with the base class and the in-memory version.
+
+## Running
+
+1. `cd` into this folder
+1. `python3 app.py`
+1. Ctrl/cmd-click the link from the terminal to open in Chrome (will be "broken" link)
+
+## Manual Testing
+
+1. Run as above
+1. To see the current state of the in-memory simulated tables, append `/debug` to the url.
+1. To test `findPrice()`, append `/find-price/{sku}`, where `{sku}` should be some product sku, to the url.
+1. To test `receive()`, run this in Chrome DevTools console, replacing fields of `body` and changing the url if different:
+
+```JavaScript
+fetch("http://127.0.0.1:5000/receive", {
+  "headers": {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "accept-language": "en-US,en;q=0.9",
+    "cache-control": "max-age=0",
+    "sec-ch-ua": "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "upgrade-insecure-requests": "1",
+    "content-type": "application/json",
+  },
+  "referrerPolicy": "strict-origin-when-cross-origin",
+  "body": JSON.stringify({
+      sku: '123',
+      retailer: 'bob\'s furniture',
+      price: 172.9,
+      url: 'whatever.com',
+  }),
+  "method": "PUT",
+  "mode": "cors",
+  "credentials": "include"
+});
+```
+
+NOTE: this is obtained by doing the GET request and then doing **Copy -> Copy as Fetch** and modifying the url, body, method, and content-type.
+
+## Unit Tests
+
+`python3 -m unittest *_test.py`
+
+- from within this folder
