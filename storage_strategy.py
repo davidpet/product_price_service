@@ -20,6 +20,7 @@ class StorageStrategy:
         self.__update_latest_table(api_record)
         self.__update_lowest_table(api_record)
     
+    # TODO: maybe make this call into a protected method too
     def lowest_price(self, sku):
         raise NotImplementedError
     
