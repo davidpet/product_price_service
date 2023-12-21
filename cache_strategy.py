@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-def get_cache_strategy():
-    # TODO: consider redis version and mirroring
+def get_cache_strategy(app):
+    # TODO: take similar options and do similar mirroring to storage strategy
     return InMemoryCacheStrategy()
 
 class CacheStrategy(ABC):

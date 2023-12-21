@@ -1,6 +1,6 @@
 # Product Price Service
 ## Status
-Currently only uses in-memory dict of all request objects and does a slow O(n^2) search to find the lowest.
+When you run the app it will use an in-memory version of the database tables and appear to work (though without any indexing or network latency).  A sketch of the beginning of the code for using mirrored databases is shown in `storage_strategy.py` along with the base class and the in-memory version.
 
 ## Running
 1. `cd` into this folder
@@ -45,6 +45,8 @@ NOTE: this is obtained by doing the GET request and then doing __Copy -> Copy as
 ## Dependencies
 
 1. `pip install flask`
+1. `pip install flask_sqlalchemy`
+1. Environment variables for connection strings of `MASTER_DB` and `REPLICA_DB` if using databases (leave those unset to use in-memory instead)
 
 ## Assumptions
 

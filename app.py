@@ -2,7 +2,6 @@
 # TODO: type annotations
 # TODO: format+lint
 # TODO: unit tests
-# TODO: consider making a manual testing app that uses 'requests' instead of devtools hacking with fetch
             
 from flask import Flask, jsonify, request
 
@@ -11,8 +10,8 @@ from storage_strategy import get_storage_strategy
 from cache_strategy import get_cache_strategy
 
 app = Flask(__name__)
-storage_strategy = get_storage_strategy()
-cache_strategy = get_cache_strategy()
+storage_strategy = get_storage_strategy(app)
+cache_strategy = get_cache_strategy(app)
 
 @app.route('/receive', methods=['PUT'])
 def receive():
