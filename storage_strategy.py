@@ -1,73 +1,99 @@
+"""Storage-related functionality for the app."""
+
 from datetime import datetime
 from dataclasses import asdict
 from abc import ABC, abstractmethod
 import os
 
 from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
 
 from schema import HistoryRecord, LatestPriceRecord, LowestPriceRecord, APIRecord
 
-def get_storage_strategy(app):
-    #if not app:
-       #return UnitTestingStorageStrategy()
-    if 'MASTER_DB' in os.environ and 'REPLICA_DB' in os.environ:
-         return MirroredDatabaseStorageStrategy(app, os.environ['MASTER_DB'], os.environ['REPLICA_DB'])
-    
-    return ManualTestingStorageStrategy()
-
 class StorageStrategy(ABC):
+    """Abstract base for storage behavior."""
+
     @abstractmethod
     def start_transaction(self):
+        """Begin a transaction."""
+
         raise NotImplementedError
     
     @abstractmethod
     def end_transaction(self):
+        """Commit/end a transaction."""
+
         raise NotImplementedError
     
-    def update_price(self, api_record):
+    def update_price(self, api_record: APIRecord):
+        """Update all appropriate tables according to new price point."""
+
         self.__update_history_table(api_record)
         self.__update_latest_table(api_record)
         self.__update_lowest_table(api_record)
     
     @abstractmethod
-    def lowest_price(self, sku):
+    def lowest_price(self, sku: str) -> APIRecord:
+        """Get lowest price for a SKU in the fastest way."""
+
         raise NotImplementedError
     
     @abstractmethod
     def debug_info(self):
+        """Get arbitrary debug information (not for production)."""
+
         raise NotImplementedError
     
     @abstractmethod
-    def _update_latest_table(self, latest_price_record):
+    def _update_latest_table(self, latest_price_record: LatestPriceRecord):
+        """Subclass must override to update a latest prices table entry."""
+
         raise NotImplementedError
     
     @abstractmethod
-    def _lowest_price_table_entry(self, sku):
+    def _lowest_price_table_entry(self, sku: str) -> LowestPriceRecord:
+        """Subclass must override to get an entry from the lowest price table."""
+
         raise NotImplementedError
     
     @abstractmethod
-    def _create_lowest_price_entry(self, lowest_price_record):
+    def _create_lowest_price_entry(self, lowest_price_record: LowestPriceRecord):
+        """Subclass must override to create a new lowest price table entry."""
+
         raise NotImplementedError
     
     @abstractmethod
-    def _update_lowest_price_entry(self, lowest_price_record):
+    def _update_lowest_price_entry(self, lowest_price_record: LowestPriceRecord):
+        """Subclass must override to update an existing lowest price table entry."""
+
         raise NotImplementedError
     
     @abstractmethod
-    def _query_lowest_price_point(self, sku):
+    def _query_lowest_price_point(self, sku: str) -> LatestPriceRecord:
+        """
+        Subclass must override to find the lowest price for a sku within the
+        latest (not lowest) price table.
+        """
+
         raise NotImplementedError
     
-    def __update_history_table(self, api_record):
+    def __update_history_table(self, api_record: APIRecord):
+        """Update the history table using protected overrides."""
+
         history_record = HistoryRecord(id = -1,
                                        timestamp = datetime.utcnow(),
                                        **asdict(api_record))
         self._update_history_table(history_record)
 
-    def __update_latest_table(self, api_record):
+    def __update_latest_table(self, api_record: APIRecord):
+        """Update the latest price table using protected overrides."""
+
         latest_price_record = LatestPriceRecord(**asdict(api_record))
         self._update_latest_table(latest_price_record)
 
-    def __update_lowest_table(self, api_record):
+    def __update_lowest_table(self, api_record: APIRecord):
+        """Update the lowest price table using protected overrides."""
+
         sku, retailer, price = api_record.sku, api_record.retailer, api_record.price
 
         current_entry = self._lowest_price_table_entry(sku)
@@ -81,6 +107,8 @@ class StorageStrategy(ABC):
                 self._update_lowest_price_entry(LowestPriceRecord(**asdict(lowest_price_point)))
 
 class ManualTestingStorageStrategy(StorageStrategy):
+    """Storage strategy that uses in-memory simulation without indexing."""
+
     def __init__(self):
         # TODO: consider if this can be made safer for the gunicorn (multiprocess) case (or document)
         self.history_table = {}
@@ -89,23 +117,33 @@ class ManualTestingStorageStrategy(StorageStrategy):
         self.lowest_price_table = {}
 
     def start_transaction(self):
+        """Does nothing."""
+
         pass
     
     def end_transaction(self):
+        """Does nothing."""
+
         pass
 
-    def lowest_price(self, sku):
+    def lowest_price(self, sku: str) -> APIRecord:
+        """Get the lowest price for a SKU (or None)."""
+
         if sku in self.lowest_price_table:
             return APIRecord(**asdict(self.lowest_price_table[sku]))
         else:
             return None
 
     def debug_info(self):
+        """Get the in-memory tables in printable form."""
+
         return {'history': list(self.history_table.values()),
                 'latest': list(self.latest_price_table.values()),
                 'lowest': list(self.lowest_price_table.values())}
 
-    def _update_history_table(self, history_record):
+    def _update_history_table(self, history_record: HistoryRecord):
+        """Update the in-memory history table."""
+
         history_record = HistoryRecord(id = self.next_history_table_id,
                                        sku=history_record.sku,
                                        retailer=history_record.retailer,
@@ -115,23 +153,41 @@ class ManualTestingStorageStrategy(StorageStrategy):
         self.next_history_table_id += 1
         self.history_table[history_record.id] = history_record
 
-    def _update_latest_table(self, latest_price_record):
+    def _update_latest_table(self, latest_price_record: LatestPriceRecord):
+        """Update the in-memory latest price table."""
+
         self.latest_price_table[latest_price_record.sku,latest_price_record.retailer] = latest_price_record
     
-    def _lowest_price_table_entry(self, sku):
+    def _lowest_price_table_entry(self, sku: str) -> LowestPriceRecord|None:
+        """Get existing lowest price table entry for sku, if any."""
+
         return self.lowest_price_table.get(sku, None)
     
-    def _create_lowest_price_entry(self, lowest_price_record):
+    def _create_lowest_price_entry(self, lowest_price_record: LowestPriceRecord):
+        """Create a new lowest price table entry."""
+
         self.lowest_price_table[lowest_price_record.sku] = lowest_price_record
     
-    def _update_lowest_price_entry(self, lowest_price_record):
+    def _update_lowest_price_entry(self, lowest_price_record: LowestPriceRecord):
+        """Update existing lowest price table entry."""
+
         self.lowest_price_table[lowest_price_record.sku] = lowest_price_record
     
-    def _query_lowest_price_point(self, sku):
+    def _query_lowest_price_point(self, sku: str) -> LatestPriceRecord:
+        """
+        Find (without any indexing in this case) the lowest price from the
+        latest (not lowest) price table.
+        """
+
         price_points = [self.latest_price_table[key] for key in self.latest_price_table if key[0] == sku]
         return min(price_points, key = lambda p: p.price)
     
 class MirroredDatabaseStorageStrategy(StorageStrategy):
+    """
+    Rough sketch of a storage strategy that uses mirrored DB instances to
+    optimize getting lowest price.
+    """
+    
     # TODO: define models inheriting from db.Model
     #       as well as convenience methods to go between those and the schema.py models
 
@@ -220,3 +276,25 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #return LatestPriceRecord(**result)
     
         raise NotImplementedError
+    
+def get_storage_strategy(app: Flask|None) -> StorageStrategy:
+    """
+    Factory function to get a storage strategy based on the current environment.
+
+    By default, it gets a manual testing friendly in-memory storage strategy.
+    If 'MASTER_DB' and 'REPLICA_DB' connection strings are present, it gets a mirrored
+    storage strategy (not fully implemented yet).
+
+    Args:
+        app (Flask|None): the Flask app (None if unit testing)
+
+    Returns:
+        The new storage strategy instance.
+    """
+
+    #if not app:
+       #return UnitTestingStorageStrategy()
+    if 'MASTER_DB' in os.environ and 'REPLICA_DB' in os.environ:
+         return MirroredDatabaseStorageStrategy(app, os.environ['MASTER_DB'], os.environ['REPLICA_DB'])
+    
+    return ManualTestingStorageStrategy()

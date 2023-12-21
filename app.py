@@ -1,20 +1,34 @@
-# TODO: docstrings
-# TODO: type annotations
+"""Main Flask WSGI application hosting Product Price Service hooks."""
+
 # TODO: format+lint
 # TODO: unit tests
-            
+
 from flask import Flask, jsonify, request
 
 from schema import APIRecord
-from storage_strategy import get_storage_strategy
-from cache_strategy import get_cache_strategy
+from storage_strategy import get_storage_strategy, StorageStrategy
+from cache_strategy import get_cache_strategy, CacheStrategy
 
 app = Flask(__name__)
-storage_strategy = get_storage_strategy(app)
-cache_strategy = get_cache_strategy(app)
+
+storage_strategy: StorageStrategy = get_storage_strategy(app)
+cache_strategy: CacheStrategy = get_cache_strategy(app)
 
 @app.route('/receive', methods=['PUT'])
 def receive():
+    """
+    HTTP PUT method to receive a new price datapoint.
+
+    Handles DB and cache updates as handled by storage_strategy and
+    cache_strategy.
+
+    Args:
+        request.json (dict): contains fields from APIRecord.
+
+    Returns:
+        tuple('', 204) to indicate successful PUT of the data.
+    """
+
     data = request.json
     if not 'sku' in data or not data['sku'].strip():
         return jsonify({"message": "Missing sku"}), 400
@@ -40,6 +54,17 @@ def receive():
 
 @app.route('/find-price/<string:sku>', methods=['GET'])
 def find_price(sku):
+    """
+    HTTP GET method to get lowest price for a sku.
+
+    Args:
+        sku (str): the sku (case insensitive)
+
+    Returns:
+        On success, object that looks like APIRecord.
+        On failure, an appropriate 404 message.
+    """
+
     # missing/empty sku will be 404 without any extra check here
     sku = sku.lower()
 
@@ -57,6 +82,16 @@ def find_price(sku):
 # TODO: block this behind an environment flag
 @app.route('/debug', methods=['GET'])
 def debug():
+    """
+    HTTP GET method to get debug information.
+
+    This is not meant to be reachable in production.
+
+    Returns:
+        arbitrary object that depends on what the storage strategy and 
+        cache strategy decide to return
+    """
+
     return jsonify({'storage': storage_strategy.debug_info(),
                     'cache': cache_strategy.debug_info()})
 
