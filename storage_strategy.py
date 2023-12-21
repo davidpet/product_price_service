@@ -133,7 +133,7 @@ class ManualTestingStorageStrategy(StorageStrategy):
 
         pass
 
-    def lowest_price(self, sku: str) -> APIRecord:
+    def lowest_price(self, sku: str) -> APIRecord | None:
         """Get the lowest price for a SKU (or None)."""
 
         if sku in self.lowest_price_table:
@@ -308,10 +308,14 @@ def get_storage_strategy(app: Flask | None) -> StorageStrategy:
         The new storage strategy instance.
     """
 
-    #if not app:
-    #return UnitTestingStorageStrategy()
+    if not app:
+        return UnitTestingStorageStrategy()
     if 'MASTER_DB' in os.environ and 'REPLICA_DB' in os.environ:
         return MirroredDatabaseStorageStrategy(app, os.environ['MASTER_DB'],
                                                os.environ['REPLICA_DB'])
 
     return ManualTestingStorageStrategy()
+
+
+# TODO: make something better (but we're mocking it for now anyway)
+UnitTestingStorageStrategy = ManualTestingStorageStrategy

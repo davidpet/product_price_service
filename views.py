@@ -36,12 +36,18 @@ def create_app(testing: bool) -> tuple[Flask, StorageStrategy, CacheStrategy]:
         """
 
         data = request.json
-        if not 'sku' in data or not data['sku'].strip():
-            return jsonify({'message': 'Missing sku'}), 400
-        if not 'retailer' in data or not data['retailer'].strip():
-            return jsonify({'message': 'Missing retailer'}), 400
-        if not 'price' in data:
-            return jsonify({'message': 'Missing price'}), 400
+
+        # TODO: these should be broken up more for more targeted error messages
+        if not 'sku' in data or not isinstance(data['sku'],
+                                               str) or not data['sku'].strip():
+            return jsonify({'message': 'Missing or wrong type for sku'}), 400
+        if not 'retailer' in data or not isinstance(
+                data['retailer'], str) or not data['retailer'].strip():
+            return jsonify({'message':
+                            'Missing or wrong type for retailer'}), 400
+        if not 'price' in data or not isinstance(
+                data['price'], float) and not isinstance(data['price'], int):
+            return jsonify({'message': 'Missing or wrong type for price'}), 400
         if data['price'] < 0:
             return jsonify({'message': 'Price cannot be negative'}), 400
 
