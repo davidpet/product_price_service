@@ -1,5 +1,6 @@
 from datetime import datetime
 from dataclasses import asdict
+from abc import ABC, abstractmethod
 
 from schema import HistoryRecord, LatestPriceRecord, LowestPriceRecord, APIRecord
 
@@ -8,10 +9,12 @@ def get_storage_strategy():
     # TODO: mirroring version, unit testing version, credentials safely, etc.
     return ManualTestingStorageStrategy()
 
-class StorageStrategy:
+class StorageStrategy(ABC):
+    @abstractmethod
     def start_transaction(self):
         raise NotImplementedError
     
+    @abstractmethod
     def end_transaction(self):
         raise NotImplementedError
     
@@ -20,11 +23,32 @@ class StorageStrategy:
         self.__update_latest_table(api_record)
         self.__update_lowest_table(api_record)
     
-    # TODO: maybe make this call into a protected method too
+    @abstractmethod
     def lowest_price(self, sku):
         raise NotImplementedError
     
+    @abstractmethod
     def debug_info(self):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _update_latest_table(self, latest_price_record):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _lowest_price_table_entry(self, sku):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _create_lowest_price_entry(self, lowest_price_record):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _update_lowest_price_entry(self, lowest_price_record):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _query_lowest_price_point(self, sku):
         raise NotImplementedError
     
     def __update_history_table(self, api_record):

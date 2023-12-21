@@ -1,17 +1,23 @@
+from abc import ABC, abstractmethod
+
 def get_cache_strategy():
     # TODO: consider redis version and mirroring
     return InMemoryCacheStrategy()
 
-class CacheStrategy:
+class CacheStrategy(ABC):
+    @abstractmethod
     def invalidate(self, sku):
         raise NotImplementedError
     
+    @abstractmethod
     def update(self, sku, api_record):
         raise NotImplementedError
     
+    @abstractmethod
     def retrieve(self, sku):
         raise NotImplementedError
     
+    @abstractmethod
     def debug_info(self):
         raise NotImplementedError
     
