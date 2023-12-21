@@ -194,7 +194,7 @@ class ManualTestingStorageStrategy(StorageStrategy):
 
         price_points = [
             value for key, value in self.latest_price_table.items()
-            if key == sku
+            if key[0] == sku
         ]
         return min(price_points, key=lambda p: p.price)
 
