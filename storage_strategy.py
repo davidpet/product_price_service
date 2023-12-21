@@ -193,8 +193,8 @@ class ManualTestingStorageStrategy(StorageStrategy):
         """
 
         price_points = [
-            self.latest_price_table[key] for key in self.latest_price_table
-            if key[0] == sku
+            value for key, value in self.latest_price_table.items()
+            if key == sku
         ]
         return min(price_points, key=lambda p: p.price)
 
@@ -206,7 +206,8 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
     """
 
     # TODO: define models inheriting from db.Model
-    #       as well as convenience methods to go between those and the schema.py models
+    #       as well as convenience methods to go between those and the
+    #       schema.py models
 
     def __init__(self, app, master_uri, replica_uri):
         app.config['SQLALCHEMY_DATABASE_URI'] = master_uri
@@ -298,8 +299,8 @@ def get_storage_strategy(app: Flask | None) -> StorageStrategy:
     Factory function to get a storage strategy based on the current environment.
 
     By default, it gets a manual testing friendly in-memory storage strategy.
-    If 'MASTER_DB' and 'REPLICA_DB' connection strings are present, it gets a mirrored
-    storage strategy (not fully implemented yet).
+    If 'MASTER_DB' and 'REPLICA_DB' connection strings are present,
+    it gets a mirrored storage strategy (not fully implemented yet).
 
     Args:
         app (Flask|None): the Flask app (None if unit testing)
