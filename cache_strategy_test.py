@@ -9,6 +9,8 @@ from schema import APIRecord
 class CacheStrategyTests(unittest.TestCase):
     """Tests for cache_strategy.py"""
 
+    # TODO: test getCacheStrategy() when it's more interesting
+
     def test_in_memory_cache_retrieval_initially_fails(self):
         strategy = InMemoryCacheStrategy()
 
