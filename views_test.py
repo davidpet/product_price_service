@@ -14,7 +14,7 @@ class ViewsTests(unittest.TestCase):
     # TODO: there are some holes in test coverage of wiring of optional url
 
     def setUp(self):
-        app, _, __ = create_app(testing=True)
+        app, _, _ = create_app(testing=True)
         app.testing = True
         self.client = app.test_client()
 
