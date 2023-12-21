@@ -6,4 +6,4 @@ app, _, __ = create_app(testing=False)
 
 # TODO: consider port configuration, etc.
 if __name__ == '__main__':
-    app.run(port=7000, debug=True)
+    app.run(debug=True)
