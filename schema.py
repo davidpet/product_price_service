@@ -11,6 +11,8 @@ class HistoryRecord:
     retailer: str
     price: float
     timestamp: datetime
+    fromdate: datetime | None
+    todate: datetime | None
     url: str | None = None
 
 
@@ -19,6 +21,8 @@ class LatestPriceRecord:
     sku: str  # composite primary key + composite index
     retailer: str  # composite primary key
     price: float  # composite index
+    fromdate: datetime | None
+    todate: datetime | None
     url: str | None = None
 
 
@@ -27,6 +31,8 @@ class LowestPriceRecord:
     sku: str  # primary key (index)
     retailer: str
     price: float
+    fromdate: datetime | None
+    todate: datetime | None
     url: str | None = None
 
 
@@ -35,4 +41,6 @@ class APIRecord:
     sku: str
     retailer: str
     price: float
+    fromdate: datetime | None
+    todate: datetime | None
     url: str | None = None

@@ -4,6 +4,8 @@ from datetime import datetime
 from dataclasses import asdict
 from abc import ABC, abstractmethod
 import os
+import requests
+import json
 
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
@@ -18,13 +20,13 @@ class StorageStrategy(ABC):
     def start_transaction(self):
         """Begin a transaction."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def end_transaction(self):
         """Commit/end a transaction."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def update_price(self, api_record: APIRecord):
         """Update all appropriate tables according to new price point."""
@@ -34,42 +36,48 @@ class StorageStrategy(ABC):
         self.__update_lowest_table(api_record)
 
     @abstractmethod
-    def lowest_price(self, sku: str) -> APIRecord:
+    def lowest_price(self, sku: str) -> APIRecord | None:
         """Get lowest price for a SKU in the fastest way."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    @abstractmethod
+    def latest_for_retailer(self, sku: str, retailer: str) -> APIRecord | None:
+        """Get the latest price for a given retailer/sku combination."""
+
+        raise NotImplementedError()
 
     @abstractmethod
     def debug_info(self):
         """Get arbitrary debug information (not for production)."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def _update_latest_table(self, latest_price_record: LatestPriceRecord):
         """Subclass must override to update a latest prices table entry."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def _lowest_price_table_entry(self, sku: str) -> LowestPriceRecord:
         """Subclass must override to get an entry from the lowest price table."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def _create_lowest_price_entry(self,
                                    lowest_price_record: LowestPriceRecord):
         """Subclass must override to create a new lowest price table entry."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def _update_lowest_price_entry(self,
                                    lowest_price_record: LowestPriceRecord):
         """Subclass must override to update an existing lowest price table entry."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def _query_lowest_price_point(self, sku: str) -> LatestPriceRecord:
@@ -78,7 +86,17 @@ class StorageStrategy(ABC):
         latest (not lowest) price table.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    @abstractmethod
+    def schedule_update(self, api_record: APIRecord) -> None:
+        """Internal API to schedule chron job for a dated price point."""
+
+        # probably should do this in subclass and leave this throwing
+        # add chron job
+        # would probably not even need this API - just have chron job that
+        # looks at the history table directly every 30 min, for instance
+        raise NotImplementedError()
 
     def __update_history_table(self, api_record: APIRecord):
         """Update the history table using protected overrides."""
@@ -87,30 +105,36 @@ class StorageStrategy(ABC):
                                        timestamp=datetime.utcnow(),
                                        **asdict(api_record))
         self._update_history_table(history_record)
+        if history_record.fromdate is not None or history_record.todate is not None:
+            #self._schedule_update(api_record) # changed to http for now
+            # TODO: make a constant or config entry for timeout
+            requests.post(json.dumps(history_record), timeout=5 * 60.0)
 
     def __update_latest_table(self, api_record: APIRecord):
         """Update the latest price table using protected overrides."""
 
         latest_price_record = LatestPriceRecord(**asdict(api_record))
-        self._update_latest_table(latest_price_record)
+        if latest_price_record.fromdate is None and latest_price_record.todate is None:
+            self._update_latest_table(latest_price_record)
 
     def __update_lowest_table(self, api_record: APIRecord):
         """Update the lowest price table using protected overrides."""
 
         sku, retailer, price = api_record.sku, api_record.retailer, api_record.price
 
-        current_entry = self._lowest_price_table_entry(sku)
-        if not current_entry:
-            self._create_lowest_price_entry(
-                LowestPriceRecord(**asdict(api_record)))
-        else:
-            if price <= current_entry.price:
-                self._update_lowest_price_entry(
+        if api_record.fromdate is None and api_record.todate is None:
+            current_entry = self._lowest_price_table_entry(sku)
+            if not current_entry:
+                self._create_lowest_price_entry(
                     LowestPriceRecord(**asdict(api_record)))
-            elif price > current_entry.price and current_entry.retailer == retailer:
-                lowest_price_point = self._query_lowest_price_point(sku)
-                self._update_lowest_price_entry(
-                    LowestPriceRecord(**asdict(lowest_price_point)))
+            else:
+                if price <= current_entry.price:
+                    self._update_lowest_price_entry(
+                        LowestPriceRecord(**asdict(api_record)))
+                elif price > current_entry.price and current_entry.retailer == retailer:
+                    lowest_price_point = self._query_lowest_price_point(sku)
+                    self._update_lowest_price_entry(
+                        LowestPriceRecord(**asdict(lowest_price_point)))
 
 
 class ManualTestingStorageStrategy(StorageStrategy):
@@ -141,6 +165,22 @@ class ManualTestingStorageStrategy(StorageStrategy):
         else:
             return None
 
+    def latest_for_retailer(self, sku: str, retailer: str) -> APIRecord | None:
+        """Get the latest price for a given retailer/sku combination."""
+
+        record = self.latest_price_table[sku, retailer]
+        if not record:
+            return None
+        return APIRecord(**asdict(record))
+
+    def schedule_update(self, api_record: APIRecord) -> None:
+        """Internal API to schedule chron job for a dated price point."""
+
+        # add chron job
+        # would probably not even need this API - just have chron job that
+        # looks at the history table directly every 30 min, for instance
+        raise NotImplementedError()
+
     def debug_info(self):
         """Get the in-memory tables in printable form."""
 
@@ -158,7 +198,9 @@ class ManualTestingStorageStrategy(StorageStrategy):
                                        retailer=history_record.retailer,
                                        price=history_record.price,
                                        timestamp=history_record.timestamp,
-                                       url=history_record.url)
+                                       url=history_record.url,
+                                       fromdate=history_record.fromdate,
+                                       todate=history_record.todate)
         self.next_history_table_id += 1
         self.history_table[history_record.id] = history_record
 
@@ -233,7 +275,19 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #else:
         #return None
 
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    def latest_for_retailer(self, sku: str, retailer: str) -> APIRecord | None:
+
+        raise NotImplementedError()
+
+    def schedule_update(self, api_record: APIRecord) -> None:
+        """Internal API to schedule chron job for a dated price point."""
+
+        # add chron job
+        # would probably not even need this API - just have chron job that
+        # looks at the history table directly every 30 min, for instance
+        raise NotImplementedError()
 
     def debug_info(self):
         # TODO: consider querying for first 10 rows or something to show here
@@ -245,7 +299,7 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #history = History(**history_record)
         #self.db.session.add(history)
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _update_latest_table(self, latest_price_record):
         # TODO: set up LatestPrice model and conversions with latest_price_record
@@ -257,7 +311,7 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #else:
         #self.db.session.add(LatestPrice(**latest_price_record))
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _lowest_price_table_entry(self, sku):
         # TODO: set up LowestPrice model and conversions with LowestPriceRecord
@@ -268,14 +322,14 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #else:
         #return None
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _create_lowest_price_entry(self, lowest_price_record):
         # TODO: set up LowestPrice model and conversions with LowestPriceRecord
 
         #db.session.add(LowestPrice(**lowest_price_record))
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _update_lowest_price_entry(self, lowest_price_record):
         # TODO: set up LowestPrice model and conversions with LowestPriceRecord
@@ -283,7 +337,7 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #entry = self.db.session.query(LowestPrice).filter_by(sku = lowest_price_record.sku)
         #entry.copyFrom(**lowest_price_record)
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _query_lowest_price_point(self, sku):
         # TODO: set up LowestPrice and LatestPrice models and conversions with records
@@ -291,7 +345,7 @@ class MirroredDatabaseStorageStrategy(StorageStrategy):
         #result = self.db.session.query(LatestPrice).filter_by(sku=sku).order_by(LatestPrice.price).first()
         #return LatestPriceRecord(**result)
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def get_storage_strategy(app: Flask | None) -> StorageStrategy:

@@ -14,25 +14,25 @@ class CacheStrategy(ABC):
     def invalidate(self, sku: str):
         """Invalidate the cache for the given sku."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def update(self, sku: str, api_record: APIRecord):
         """Update the cache for the given sku to point to the given record."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve(self, sku: str) -> APIRecord | None:
         """Retreive the cache entry (or None) for the given sku."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def debug_info(self):
         """Get information for dev testing to watch the cache happening."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class InMemoryCacheStrategy(CacheStrategy):
